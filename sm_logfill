@@ -1,0 +1,19 @@
+
+void main()
+{
+    itemproperty ipActivate = ItemPropertyCastSpell(329,1);                             //ItemProperty to be added. Cast Spell "Unique Power" expendable.
+
+    if(!GetLocalInt(OBJECT_SELF,"Respawn_Slow")){
+        CreateItemOnObject("nw_it_msmlmisc21",OBJECT_SELF,1,"sljp_tinder");             //Create base bluprint Rag with Tag "sljp_tinder"
+        SetLocalInt(OBJECT_SELF,"Respawn_Slow",1);                                      //Respawn Flag
+        DelayCommand(30.0,DeleteLocalInt(OBJECT_SELF,"Respawn_Slow"));                  //Respawn created Rag every 30 seconds
+        object oTouched = GetFirstItemInInventory(OBJECT_SELF);                         //Identify created Rag item to script
+                if(GetTag(oTouched)=="sljp_tinder"){                                    //If Rag has tag "sljp_tinder"
+                    string sTouched = GetTag(oTouched);                                 //Identify and store Tag of spawned item.
+                    SetName(oTouched, "Tinder");                                        //Call that Rag "Tinder"
+                    SetDescription (oTouched, sTouched, TRUE);                          //Give the Tinder its Tag as a description
+                    AddItemProperty(DURATION_TYPE_PERMANENT,ipActivate,oTouched, 0.0);  //Add previously identified item property to Tinder item
+                }
+    }
+
+}
