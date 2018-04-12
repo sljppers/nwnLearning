@@ -1,0 +1,37 @@
+void main()
+{
+    object oArea = GetArea(OBJECT_SELF);
+    vector vSelf = GetPosition(OBJECT_SELF);
+    location lSelf = GetLocation(OBJECT_SELF);
+
+    string sVecX = FloatToString (vSelf.x,5,4);
+    string sVecY = FloatToString (vSelf.y,5,4);
+    int nOffsetX = Random(12)+7;
+    int nOffsetY = Random(12)+7;
+    int nOffsetPN = Random (4);
+
+        if(nOffsetPN==1)
+            {
+            nOffsetX=nOffsetX*-1;
+            }
+        if(nOffsetPN==2)
+            {
+            nOffsetY=nOffsetY*-1;
+            };
+        if(nOffsetPN==3)
+            {
+            nOffsetX=nOffsetX*-1;
+            nOffsetY=nOffsetY*-1;
+            };
+
+    float fSelfOffsetX = vSelf.x + IntToFloat(nOffsetX)/10;
+    float fSelfOffsetY = vSelf.y + IntToFloat(nOffsetY)/10;
+
+    vector vLootDrop = Vector(fSelfOffsetX,fSelfOffsetY,0.0);
+    string sLootVecX = FloatToString (vLootDrop.x,5,2);
+    string sLootVecY = FloatToString (vLootDrop.y,5,2);
+    location lLootDrop = Location(oArea,vLootDrop,0.0);
+
+
+    CreateObject(OBJECT_TYPE_ITEM,"LOOTTOBEDROPPEDRESREF_CHANGEME", lLootDrop, TRUE);   //Determines what loot will be dropped around the object
+}
