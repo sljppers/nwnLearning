@@ -1,0 +1,106 @@
+ void firehb()
+ {
+    int nFuel = GetLocalInt(OBJECT_SELF,"nFuel");
+    int nBornS = GetLocalInt(OBJECT_SELF,"nBornS");
+    int nBornM = GetLocalInt(OBJECT_SELF,"nBornM");
+    int nBornH = GetLocalInt(OBJECT_SELF,"nBornH");
+    location lFire = GetLocation(OBJECT_SELF);
+    effect eFireDie = EffectVisualEffect(263,FALSE);
+    event evBeat = EventUserDefined(615881);
+    int nCall = GetUserDefinedEventNumber();
+    object oFuel = GetFirstItemInInventory(OBJECT_SELF);
+    int nFuelType = GetBaseItemType(oFuel);
+    string sFuelWood = GetTag(oFuel);
+    string sBurning = GetTag(oFuel);
+    string sBurningName = GetName(oFuel);
+    object oBurning = GetObjectByTag(sBurningName,1);
+    object oBurner = GetLastOpenedBy();
+    string sBurnerName = GetName(oBurner);
+    int nFuelTick = nFuel-1;
+
+    if(GetIsObjectValid(oFuel)&&sFuelWood=="fb_wood"){                   //Item in Fire is Wood
+        SetLocalInt(OBJECT_SELF,"nFuel",nFuel+4);
+        SpeakString("Fire consumes the added wood.",TALKVOLUME_TALK);
+        DestroyObject(oFuel,0.0);
+        DelayCommand(30.0,firehb());
+        }
+
+    else if(nFuel==0){
+        ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,eFireDie,lFire,2.5);
+        DestroyObject(OBJECT_SELF,1.0);
+        }
+
+
+    else{
+        SetLocalInt(OBJECT_SELF,"nFuel",nFuelTick);
+        SpeakString("*Hisses and pops as a log shifts within the flame.* ("+IntToString(nFuel)+")",TALKVOLUME_TALK);
+        SignalEvent(OBJECT_SELF,EventUserDefined(615882));
+        }
+ }
+
+
+ void main()
+{
+    int nFuel = GetLocalInt(OBJECT_SELF,"nFuel");
+    int nBornS = GetLocalInt(OBJECT_SELF,"nBornS");
+    int nBornM = GetLocalInt(OBJECT_SELF,"nBornM");
+    int nBornH = GetLocalInt(OBJECT_SELF,"nBornH");
+    location lFire = GetLocation(OBJECT_SELF);
+    effect eFireDie = EffectVisualEffect(263,FALSE);
+    event evBeat = EventUserDefined(615881);
+    int nCall = GetUserDefinedEventNumber();
+    object oFuel = GetFirstItemInInventory(OBJECT_SELF);
+    int nFuelType = GetBaseItemType(oFuel);
+    string sFuelWood = GetTag(oFuel);
+    string sBurning = GetTag(oFuel);
+    string sBurningName = GetName(oFuel);
+    object oBurning = GetObjectByTag(sBurningName,1);
+    object oBurner = GetLastOpenedBy();
+    string sBurnerName = GetName(oBurner);
+    int NameChanged = GetLocalInt(oFuel, "NameChanged");
+    int nFuelTick = nFuel-1;
+
+ switch (nCall)
+    {
+        case 615881:
+        {
+        SpeakString(IntToString(nFuel)+" Fuel Left. Fire born at: "+IntToString(nBornH)+":"+IntToString(nBornM)+":"+IntToString(nBornS),TALKVOLUME_TALK);
+        DelayCommand(5.0,firehb());
+        break;
+        }
+
+        case 615882:
+        {
+            if(GetIsObjectValid(oFuel)&&sFuelWood!="fb_wood"&&GetLocalInt(oFuel,"Charred")!=1){   //Item in Fire is Not Wood
+                    if(NameChanged!=TRUE){
+                        SetName(oFuel,"Charred "+sBurningName);
+                        SetLocalInt(oFuel,"NameChanged",TRUE);
+                        }
+                SpeakString(sBurningName+" sits atop the flames.",TALKVOLUME_TALK);
+                    if(nFuelType==15||nFuelType==20||nFuelType==21||nFuelType==24||nFuelType==25||nFuelType==28||nFuelType==29||nFuelType==34||nFuelType==36||nFuelType==39||nFuelType==43||nFuelType==45||nFuelType==46||nFuelType==54||nFuelType==61||nFuelType==66||nFuelType==68||nFuelType==74||nFuelType==75||nFuelType==79||nFuelType==80||nFuelType==102||nFuelType==103||nFuelType==105||nFuelType==106||nFuelType==109||nFuelType==110||nFuelType==111){
+                                    SetLocalInt(oFuel,"Charred",1);
+                                    }
+                DelayCommand(10.0,firehb());
+                break;
+                }
+            else if(GetIsObjectValid(oFuel)&&sFuelWood!="fb_wood"&&GetLocalInt(oFuel,"Charred")==1){   //Item has been left in the Fire that is not Wood will be destroyed
+                SpeakString(sBurningName+" falls to ash amongst the flames of the fire.");
+                DestroyObject(oFuel,0.0);
+                SetLocalInt(OBJECT_SELF,"nFuel",nFuel+1);
+                DelayCommand(15.0,firehb());
+                break;
+                }
+
+            else{
+                DelayCommand(15.0,firehb());
+                break;}
+        }
+
+        default:
+        {
+        break;
+        }
+    }
+
+}
+
