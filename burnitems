@@ -1,80 +1,55 @@
  void firehb()
  {
-    int nFuel = GetLocalInt(OBJECT_SELF,"nFuel");
     location lFire = GetLocation(OBJECT_SELF);
     effect eFireDie = EffectVisualEffect(263,FALSE);
     object oFuel = GetFirstItemInInventory(OBJECT_SELF);
 
-    if(GetIsObjectValid(oFuel)&&GetTag(oFuel)=="fb_wood"){
-        SetLocalInt(OBJECT_SELF,"nFuel",nFuel+4);
-        SpeakString("Fire consumes the added wood.",TALKVOLUME_TALK);
-        DestroyObject(oFuel,0.0);
-        DelayCommand(30.0,firehb());
-        }
+    while(GetIsObjectValid(oFuel)){
 
-    else if(nFuel==0){
+            string sCurrentBurn = GetName(oFuel);
+
+            SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")+1);
+                if(GetLocalInt(oFuel,"nBurnCount")>=2){
+                    if(GetLocalInt(oFuel,"BurnedName")==TRUE){
+                        string sOrigName = GetName(oFuel);
+                        SetName(oFuel,"Charred "+sOrigName);
+                        SetLocalInt(oFuel,"BurnedName",TRUE);
+                        }
+                    }
+                if(GetLocalInt(oFuel,"nBurnCount")>=3 && GetTag(oFuel)=="fb_wood"){
+                    SpeakString("A "+sCurrentBurn+" gives way to flame, fueling the fire.",TALKVOLUME_TALK);
+                    SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+6);
+                    DestroyObject(oFuel);
+                    }
+
+            oFuel = GetNextItemInInventory(OBJECT_SELF);
+            }
+
+
+    if(GetLocalInt(OBJECT_SELF,"Fueled") == 0){
         SpeakString("The final flames of the campfire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
         ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,eFireDie,lFire,2.5);
         DestroyObject(OBJECT_SELF,1.0);
         }
 
-
-    else{
-        SetLocalInt(OBJECT_SELF,"nFuel",GetLocalInt(OBJECT_SELF,"nFuel")-1);
-        SpeakString("*Hisses and pops as a log shifts within the flame.* ("+IntToString(nFuel)+")",TALKVOLUME_TALK);
-        SignalEvent(OBJECT_SELF,EventUserDefined(615882));
+    else {
+        SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-1);
+        SpeakString("*Hisses and pops as a log shifts within the flame.* ("+IntToString(GetLocalInt(OBJECT_SELF,"Fueled"))+")",TALKVOLUME_TALK);
+        SignalEvent(OBJECT_SELF,EventUserDefined(615881));
         }
  }
 
 
  void main()
 {
-    object oFuel = GetFirstItemInInventory(OBJECT_SELF);
-    int nFuel = GetLocalInt(OBJECT_SELF,"nFuel");
-    int nFuelType = GetBaseItemType(oFuel);
-    string sBurningName = GetName(oFuel);
-    int NameChanged = GetLocalInt(oFuel, "NameChanged");
     int nCall = GetUserDefinedEventNumber();
 
  switch (nCall)
     {
         case 615881:
         {
-        DelayCommand(5.0,firehb());
-        break;
-        }
-
-        case 615882:
-        {
-            if(GetIsObjectValid(oFuel)&&GetTag(oFuel)!="fb_wood"&&GetLocalInt(oFuel,"Charred")!=1){   //Item in Fire is Not Wood
-                    if(GetLocalInt(oFuel,"NameChanged")!=TRUE){
-                        SetName(oFuel,"Charred "+sBurningName);
-                        SetLocalInt(oFuel,"NameChanged",TRUE);
-                        }
-                SpeakString(sBurningName+" sits atop the flames.",TALKVOLUME_TALK);
-                    if(nFuelType==15||nFuelType==20||nFuelType==21||nFuelType==24||nFuelType==25||nFuelType==28||nFuelType==29||nFuelType==34||nFuelType==36||nFuelType==39||nFuelType==43||nFuelType==45||nFuelType==46||nFuelType==54||nFuelType==61||nFuelType==66||nFuelType==68||nFuelType==74||nFuelType==75||nFuelType==79||nFuelType==80||nFuelType==102||nFuelType==103||nFuelType==105||nFuelType==106||nFuelType==109||nFuelType==110||nFuelType==111){
-                                    SetLocalInt(oFuel,"Charred",1);
-                                    }
-                DelayCommand(15.0,firehb());
-                break;
-                }
-            else if(GetIsObjectValid(oFuel)&&GetTag(oFuel)!="fb_wood"&&GetLocalInt(oFuel,"Charred")==1){   //Item has been left in the Fire that is not Wood will be destroyed
-                SpeakString(sBurningName+" falls to ash amongst the flames of the fire.");
-                DestroyObject(oFuel,0.0);
-                SetLocalInt(OBJECT_SELF,"nFuel",nFuel++);
-                DelayCommand(15.0,firehb());
-                break;
-                }
-
-            else{
-                DelayCommand(15.0,firehb());
-                break;}
-        }
-
-        default:
-        {
+        DelayCommand(6.0,firehb());
         break;
         }
     }
-
 }
