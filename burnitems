@@ -3,12 +3,14 @@
     location lFire = GetLocation(OBJECT_SELF);
     effect eFireDie = EffectVisualEffect(263,FALSE);
     object oFuel = GetFirstItemInInventory(OBJECT_SELF);
+    int nLogCount;
 
     while(GetIsObjectValid(oFuel)){
 
             string sCurrentBurn = GetName(oFuel);
 
             SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")+1);
+
                 if(GetLocalInt(oFuel,"nBurnCount")>=2){
                     if(GetLocalInt(oFuel,"BurnedName")==TRUE){
                         string sOrigName = GetName(oFuel);
@@ -16,15 +18,31 @@
                         SetLocalInt(oFuel,"BurnedName",TRUE);
                         }
                     }
+
                 if(GetLocalInt(oFuel,"nBurnCount")>=3 && GetTag(oFuel)=="fb_wood"){
-                    SpeakString("A "+sCurrentBurn+" gives way to flame, fueling the fire.",TALKVOLUME_TALK);
-                    SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+6);
+                    nLogCount++;
+                    SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+12);
                     DestroyObject(oFuel);
                     }
 
             oFuel = GetNextItemInInventory(OBJECT_SELF);
             }
 
+    if(nLogCount==3){
+        SpeakString("The logs within the well managed fire begin to burn in tandem.",TALKVOLUME_TALK);
+        SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+9);
+        }
+
+        nLogCount = 0;
+
+    if(GetLocalInt(OBJECT_SELF,"Fueled") >= 50){
+        SpeakString("The fire rages. Adding any more wood would be dangerous.",TALKVOLUME_TALK);
+        SetLocalInt(OBJECT_SELF,"Fueled",49);
+        }
+
+    if(GetLocalInt(OBJECT_SELF,"Fueled") ==3){
+        SpeakString("The fire is quieting to a small flame.");
+        }
 
     if(GetLocalInt(OBJECT_SELF,"Fueled") == 0){
         SpeakString("The final flames of the campfire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
@@ -34,7 +52,6 @@
 
     else {
         SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-1);
-        SpeakString("*Hisses and pops as a log shifts within the flame.* ("+IntToString(GetLocalInt(OBJECT_SELF,"Fueled"))+")",TALKVOLUME_TALK);
         SignalEvent(OBJECT_SELF,EventUserDefined(615881));
         }
  }
@@ -48,7 +65,7 @@
     {
         case 615881:
         {
-        DelayCommand(6.0,firehb());
+        DelayCommand(20.0,firehb());
         break;
         }
     }
