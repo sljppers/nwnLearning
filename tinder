@@ -28,21 +28,10 @@
 
 #include "x2_inc_switches"
 
-void LateSignal()       {
-                        object oNewFire;
-                        SignalEvent(oNewFire,EventUserDefined(615882));
-                        }
-
 void aMakeFireAtLocation(object oPC,location lTarget){
                         CreateObject(OBJECT_TYPE_PLACEABLE,"firebld_cmpfr",lTarget,TRUE,"fb_cmpfr");
                         object oNewFire = GetNearestObjectByTag("fb_cmpfr",oPC,1);
-                        int nFireLifeM = GetTimeMinute();
-                        int nFireLifeH = GetTimeHour();
-                        int nFireLifeS = GetTimeSecond();
-                        SetLocalInt(oNewFire,"nBornS",nFireLifeS);
-                        SetLocalInt(oNewFire,"nBornM",nFireLifeM);
-                        SetLocalInt(oNewFire,"nBornH",nFireLifeH);
-                        SetLocalInt(oNewFire,"nFuel",1);
+                        SetLocalInt(oNewFire,"Fueled",5);
                         SignalEvent(oNewFire,EventUserDefined(615881));
                         }
 
@@ -96,34 +85,25 @@ void main()
             oPC   = GetItemActivator();
             oItem = GetItemActivated();
             lTarget = GetItemActivatedTargetLocation();
-            oArea = GetAreaFromLocation(lTarget);
             lPC = GetLocation(GetItemActivator());
             vPC = GetPosition(oPC);
             vTarget = GetPositionFromLocation(lTarget);
             fPCtargetDeltaX = vPC.x-vTarget.x;
             fPCtargetDeltaY = vPC.y-vTarget.y;
-            sDeltaX = FloatToString(fPCtargetDeltaX,5,5);
-            sDeltaY = FloatToString(fPCtargetDeltaY,5,5);
             fXYDeltaHypotenuse = sqrt((fPCtargetDeltaX*fPCtargetDeltaX) + (fPCtargetDeltaY*fPCtargetDeltaY));
             fDeltaWalkDelay = fXYDeltaHypotenuse*0.2;
-
-            SendMessageToPC(oPC,sDeltaX);
-            SendMessageToPC(oPC,sDeltaY);
+            foPCFacing = GetFacing(oPC);
 
             if(fPCtargetDeltaX>2.0||fPCtargetDeltaX<-2.0||fPCtargetDeltaY>2.0||fPCtargetDeltaY<-2.0){
-                        SendMessageToPC (oPC,"Moving to place a campfire at that position.");
-                        AssignCommand(oPC,ActionMoveToLocation(lTarget,TRUE));
-                        AssignCommand(oPC,ActionPlayAnimation(12,2.0,2.0));
-                        DelayCommand(2.5 + fDeltaWalkDelay,AssignCommand(oPC,aMakeFireAtLocation(oPC,lTarget)));
-                    }
+                 AssignCommand(oPC,ActionMoveToLocation(lTarget,TRUE));
+                 AssignCommand(oPC,ActionPlayAnimation(12,0.4,24.0));
+                 DelayCommand(24.0 + fDeltaWalkDelay,AssignCommand(oPC,aMakeFireAtLocation(oPC,lTarget)));
+                }
 
-            else    {
-                        AssignCommand(oPC,ActionPlayAnimation(12,2.0,2.0));
-                        DelayCommand(2.0,AssignCommand(oPC,aMakeFireAtLocation(oPC,lTarget)));
-                    }
-
-
-
+            else{
+                 AssignCommand(oPC,ActionPlayAnimation(12,0.4,24.0));
+                 DelayCommand(24.0,AssignCommand(oPC,aMakeFireAtLocation(oPC,lTarget)));
+                }
             break;
 
 // EQUIP
