@@ -1,5 +1,6 @@
-void campfirehb()
- {
+void main()
+{
+    int nCall = GetUserDefinedEventNumber();
     location lFire = GetLocation(OBJECT_SELF);
     effect eFireDie = EffectVisualEffect(263,FALSE);
     object oFuel = GetFirstItemInInventory(OBJECT_SELF);
@@ -9,7 +10,15 @@ void campfirehb()
     int nPCFireBuilder = GetHasFeat(FEAT_TURN_UNDEAD,GetLastDisturbed());//CHANGEMETOPROPERFEAT                 //Checks if the last PC to Disturb the fire has Firebuilding.
     int nFireState;
 
-    while(GetIsObjectValid(oFuel)){
+ switch (nCall)
+    {
+        case 615881:
+
+            DelayCommand(20.0,SignalEvent(OBJECT_SELF,EventUserDefined(615882)));
+        break;
+
+        case 615882:
+            while(GetIsObjectValid(oFuel)){
 
             SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")+1);                                      //Add a burn counter on an item within the fire.
             string sCurrentBurn = GetName(oFuel);
@@ -57,55 +66,42 @@ void campfirehb()
             oFuel = GetNextItemInInventory(OBJECT_SELF);
             }
 
-    if(nPCFireBuilder==TRUE){
-            if(nLogCount==3){                                                                                        //Three logs at a time will burn more efficiently, combining together to burn for 900 seconds of burn time. (15 minutes)
-                SpeakString("The logs within the well managed fire begin to burn in tandem.",TALKVOLUME_TALK);
-                SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+18);
+            if(nPCFireBuilder==TRUE){
+                    if(nLogCount==3){                                                                                        //Three logs at a time will burn more efficiently, combining together to burn for 900 seconds of burn time. (15 minutes)
+                        SpeakString("The logs within the well managed fire begin to burn in tandem.",TALKVOLUME_TALK);
+                        SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+18);
+                        }
                 }
-        }
 
-        nLogCount = 0;                                                                                               //A number other than three logs at a time will be discarded
-        DestroyObject(GetNearestObjectByTag("temp_flame",OBJECT_SELF,1));                                            //And destroy VFX from the loop
+                nLogCount = 0;                                                                                               //A number other than three logs at a time will be discarded
+                DestroyObject(GetNearestObjectByTag("temp_flame",OBJECT_SELF,1));                                            //And destroy VFX from the loop
 
-    if(GetLocalInt(OBJECT_SELF,"Fueled") > 49){                                                                      //If fuel is greater than 49 (16.333 minutes), dial it back
-        SpeakString("The fire rages. Adding any more wood would be dangerous.",TALKVOLUME_TALK);
-        SetLocalInt(OBJECT_SELF,"Fueled",49);
-        }
-
-    if(GetLocalInt(OBJECT_SELF,"Fueled") == 4){                                                                      //Notify fire is dying. This is the latest point to burn logs. The Flame visual will disappear at this point, though the fire will still be active.
-        SpeakString("The fire is quieting to a small flame.",TALKVOLUME_TALK);
-        PlayAnimation(ANIMATION_PLACEABLE_DEACTIVATE,1.0,1.0);
-        nFireState = 0;
-        }
-
-    if(GetLocalInt(OBJECT_SELF,"Fueled") == 0){                                                                      //Kill Fire on 0 Fuel
-        SpeakString("The final flames of the campfire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
-        ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,eFireDie,lFire,2.5);
-        CreateItemOnObject("fb_ash",OBJECT_SELF,nAshCount,"fb_ash");
-        nAshCount = 0;
-        DestroyObject(OBJECT_SELF,1.0);
-        }
-
-    else {
-        SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-1);                                       //Reduce fuel by 1 and goto heartbeat case
-            if(GetLocalInt(OBJECT_SELF,"Fueled") > 4 && nFireState == 0){
-                PlayAnimation(ANIMATION_PLACEABLE_ACTIVATE,1.0,1.0);
-                nFireState = 1;
+            if(GetLocalInt(OBJECT_SELF,"Fueled") > 49){                                                                      //If fuel is greater than 49 (16.333 minutes), dial it back
+                SpeakString("The fire rages. Adding any more wood would be dangerous.",TALKVOLUME_TALK);
+                SetLocalInt(OBJECT_SELF,"Fueled",49);
                 }
-        SignalEvent(OBJECT_SELF,EventUserDefined(615881));
-        }
- }
 
-                                                                                                                     // Main here serves to house a call to a user defined event (OnActivate from Tinder), and iterate heartbeats
- void main()
-{
-    int nCall = GetUserDefinedEventNumber();
+            if(GetLocalInt(OBJECT_SELF,"Fueled") == 4){                                                                      //Notify fire is dying. This is the latest point to burn logs. The Flame visual will disappear at this point, though the fire will still be active.
+                SpeakString("The fire is quieting to a small flame.",TALKVOLUME_TALK);
+                PlayAnimation(ANIMATION_PLACEABLE_DEACTIVATE,1.0,1.0);
+                nFireState = 0;
+                }
 
- switch (nCall)
-    {
-        case 615881:
-        {
-        DelayCommand(20.0,campfirehb());
+            if(GetLocalInt(OBJECT_SELF,"Fueled") == 0){                                                                      //Kill Fire on 0 Fuel
+                SpeakString("The final flames of the campfire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
+                ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,eFireDie,lFire,2.5);
+                CreateItemOnObject("fb_ash",OBJECT_SELF,nAshCount,"fb_ash");
+                nAshCount = 0;
+                DestroyObject(OBJECT_SELF,1.0);
+                }
+
+            else {
+                SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-1);                                       //Reduce fuel by 1 and goto heartbeat case
+                    if(GetLocalInt(OBJECT_SELF,"Fueled") > 4 && nFireState == 0){
+                        PlayAnimation(ANIMATION_PLACEABLE_ACTIVATE,1.0,1.0);
+                        nFireState = 1;
+                        }
+                SignalEvent(OBJECT_SELF,EventUserDefined(615881));
         break;
         }
     }
