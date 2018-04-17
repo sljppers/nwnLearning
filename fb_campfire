@@ -1,8 +1,9 @@
-//Contents
+//Switch (nCall) Contents
 //Case 615881 = Heartbeat
 //Case 615882 = Campfire While Loop (Burns Items)
-//Case 615883 = Firebuilding Technique Space
+//Case 615883 = Firebuilding Technique Space (After While Loop)
 //Case 615884 = Checking Fueled status, deplete or kill fire
+//Case 615889 = Fire Unlit
 
 void main()
 {
@@ -10,17 +11,26 @@ void main()
     location lFire = GetLocation(OBJECT_SELF);
     effect eFireDie = EffectVisualEffect(263,FALSE);
     object oFuel = GetFirstItemInInventory(OBJECT_SELF);
-    int nLogCount;
-    int nAshCount;
+    int nLogCount = GetLocalInt(OBJECT_SELF,"LogCount");
+    int nAshCount = GetLocalInt(OBJECT_SELF,"AshCount");
     int cFuelType;
     int nPCFireBuilder = GetHasFeat(FEAT_TURN_UNDEAD,GetLastDisturbed());//CHANGEMETOPROPERFEAT                             //Checks if the last PC to Disturb the fire has Firebuilding.
     int nFireState;
+    int nWindKill;
+    object oNearestPC = GetNearestCreature(CREATURE_TYPE_PLAYER_CHAR,PLAYER_CHAR_IS_PC,OBJECT_SELF);
 
  switch (nCall)
     {
         case 615881:                                                                                                        //Object Creation Call && Heartbeat Case
 
-            DelayCommand(20.0,SignalEvent(OBJECT_SELF,EventUserDefined(615882)));
+            if(GetLocalInt(OBJECT_SELF,"Lit")==TRUE){
+                DelayCommand(20.0,SignalEvent(OBJECT_SELF,EventUserDefined(615882)));
+                break;
+                }
+            else{
+                DelayCommand(12.0,SignalEvent(OBJECT_SELF,EventUserDefined(615889)));
+                break;
+                }
         break;
 
 
@@ -39,6 +49,12 @@ void main()
                     nSmallFireBurnable = TRUE;                                                                              //These will burn in the Campfire, otherwise just Char
                     }
 
+                    if(GetTag(oFuel)=="fb_tinder"){
+                         SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+1);
+                         SpeakString("Tinder fuels the fire with a quickly dying flame.",TALKVOLUME_TALK);
+                         DestroyObject(oFuel);
+                         }
+
                     if(GetLocalInt(oFuel,"nBurnCount")>=2){                                                                 //Add Charred to name
                         if(GetLocalInt(oFuel,"BurnedName")==FALSE){
                             SetName(oFuel,"Charred "+sCurrentBurn);
@@ -49,9 +65,14 @@ void main()
                             SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+1);
                             DestroyObject(oFuel);
                             }
+                        if(GetTag(oFuel)=="fb_kindling"){                                                                   //Kindling fuels quickly, but inefficiently
+                            SpeakString("The flames lick around "+sCurrentBurn+" as it quickly adds to the flames.",TALKVOLUME_TALK);
+                            SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+3);
+                            DestroyObject(oFuel);
+                            }
                         }
 
-                    if(GetLocalInt(oFuel,"nBurnCount")>=4 && GetTag(oFuel)=="fb_wood"){                                     //Wood will burn in four heartbeats (80 seconds), making Ash and contributing to a count specific to burning three logs at a time for the most efficient fire.
+                    if(GetLocalInt(oFuel,"nBurnCount")>=4 && GetTag(oFuel)=="fb_log"){                                     //Wood will burn in four heartbeats (80 seconds), making Ash and contributing to a count specific to burning three logs at a time for the most efficient fire.
                         nAshCount++;
                         nLogCount++;
                         SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+9);
@@ -67,7 +88,7 @@ void main()
                         nAshCount++;
                         SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+2);
                         DestroyObject(oFuel);
-                        CreateObject(OBJECT_TYPE_PLACEABLE,"flamemedium001",lFire,TRUE,"temp_flame");
+                        CreateObject(OBJECT_TYPE_PLACEABLE,"plc_flamemedium",lFire,TRUE,"temp_flame");
                         PlaySound("scm_hitfire");
                         }
 
@@ -84,6 +105,25 @@ void main()
                         SpeakString("The logs within the well managed fire begin to burn in tandem.",TALKVOLUME_TALK);
                         SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+18);
                         }
+
+                    if(GetLocalInt(OBJECT_SELF,"Fueled") >= 75 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){
+                        CreateObject(OBJECT_TYPE_PLACEABLE,"fb_bonfire",lFire,TRUE,"fb_bonfire");
+                        object oNewBonFire = GetNearestObjectByTag("fb_bonfire",OBJECT_SELF,1);
+                        SetLocalInt(oNewBonFire,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled"));
+                        SetLocalInt(oNewBonFire,"Lit",TRUE);
+                        SetLocalInt(oNewBonFire,"LogCount",nLogCount);
+                        SetLocalInt(oNewBonFire,"AshCount",nAshCount);
+                            while(GetIsObjectValid(oFuel)){
+                                CopyItem(oFuel,oNewBonFire,TRUE);
+                                DestroyObject(oFuel,0.0);
+
+                                oFuel = GetNextItemInInventory(OBJECT_SELF);
+                                }
+                        SetLocalInt(oNewBonFire,"IsBonfire",TRUE);
+                        SignalEvent(oNewBonFire,EventUserDefined(615881));
+                        DestroyObject(GetNearestObjectByTag("temp_flame",OBJECT_SELF,1));
+                        DestroyObject(OBJECT_SELF,0.0);
+                        }
                 }
 
                 nLogCount = 0;                                                                                               //A number other than three logs at a time will be discarded
@@ -94,32 +134,60 @@ void main()
 
         case 615884:
 
-            if(GetLocalInt(OBJECT_SELF,"Fueled") > 49){                                                                      //If fuel is greater than 49 (16.333 minutes), dial it back
+            if(GetLocalInt(OBJECT_SELF,"Fueled") > 49 && GetLocalInt(OBJECT_SELF,"Fueled") < 75 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){                                                                      //If fuel is greater than 49 (16.333 minutes), dial it back
                 SpeakString("The fire rages. Adding any more wood would be dangerous.",TALKVOLUME_TALK);
                 SetLocalInt(OBJECT_SELF,"Fueled",49);
                 }
 
             if(GetLocalInt(OBJECT_SELF,"Fueled") == 4){                                                                      //Notify fire is dying. This is the latest point to burn logs. The Flame visual will disappear at this point, though the fire will still be active.
-                SpeakString("The fire is quieting to a small flame.",TALKVOLUME_TALK);
+                SpeakString("Only a small flame dances.",TALKVOLUME_TALK);
                 PlayAnimation(ANIMATION_PLACEABLE_DEACTIVATE,1.0,1.0);
                 nFireState = 0;
                 }
 
             if(GetLocalInt(OBJECT_SELF,"Fueled") == 0){                                                                      //Kill Fire on 0 Fuel
-                SpeakString("The final flames of the campfire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
+                SpeakString("The final flames of the fire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
                 ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,eFireDie,lFire,2.5);
                 CreateItemOnObject("fb_ash",OBJECT_SELF,nAshCount,"fb_ash");
+                nAshCount = 0;
                 DestroyObject(OBJECT_SELF,1.0);
                 }
 
-            else {
-                SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-1);                                       //Reduce fuel by 1 and goto heartbeat case
-                    if(GetLocalInt(OBJECT_SELF,"Fueled") > 4 && nFireState == 0){                                            //Reanimate fire VFX if fuel is above 4
-                        PlayAnimation(ANIMATION_PLACEABLE_ACTIVATE,1.0,1.0);
-                        nFireState = 1;
-                        }
+
+           SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-1);                                       //Reduce fuel by 1 and goto heartbeat case
+               if(GetLocalInt(OBJECT_SELF,"IsBonfire")==TRUE){
+                    SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-4);
+                    }
+               if(GetLocalInt(OBJECT_SELF,"Fueled") > 4 && nFireState == 0){                                            //Reanimate fire VFX if fuel is above 4
+                    PlayAnimation(ANIMATION_PLACEABLE_ACTIVATE,1.0,1.0);
+                    nFireState = 1;
+                    }
             SignalEvent(OBJECT_SELF,EventUserDefined(615881));
         break;
-        }
+
+        case 615889:
+
+            nWindKill = Random(10);
+
+            if(nWindKill==1 && GetHasFeat(FEAT_TURN_UNDEAD,oNearestPC)!=TRUE){//CHANGEFEAT
+                SpeakString("The kindling slides out of place, scattering.");
+                CreateObject(OBJECT_TYPE_ITEM,"fb_kindling",GetLocation(OBJECT_SELF),FALSE);
+                DestroyObject(OBJECT_SELF,1.0);
+                break;
+                }
+            SignalEvent(OBJECT_SELF,EventUserDefined(615881));
+        break;
     }
 }
+
+
+
+/*To-Do
+FB Make Bonfire burn bigger things
+FB Make Signal fire "recipe" (Ichor/Sap) and accompanying area shouts
+FB Add fire damage to arrows, weapons, brief on use
+FB Add smoke cover "recipe" for small surrounding area
+FB Cold Damage Immunity 5%?
+Add items-are-hot property and cool down
+FB Add Roll to creation, burn on crit fail
+Add warmth around area (Spectre?)
