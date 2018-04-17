@@ -5,6 +5,7 @@ void aMakeFireAtLocation(object oPC,location lTarget){
                         CreateObject(OBJECT_TYPE_PLACEABLE,"firebld_cmpfr",lTarget,TRUE,"fb_cmpfr");
                         object oNewFire = GetNearestObjectByTag("fb_cmpfr",oPC,1);
                         SetLocalInt(oNewFire,"Fueled",5);
+                        SetLocalInt(oNewFire,"Lit",TRUE);
                         SignalEvent(oNewFire,EventUserDefined(615881));
                         }
 
@@ -33,8 +34,8 @@ void main()
             lTarget = GenerateNewLocation(oPC,1.1,fDir,fAngleOpposite);
 
 
-            AssignCommand(oPC,ActionPlayAnimation(12,0.4,24.0));
-            DelayCommand(24.0,AssignCommand(oPC,aMakeFireAtLocation(oPC,lTarget)));
+            AssignCommand(oPC,ActionPlayAnimation(12,0.4,48.0));
+            DelayCommand(48.0,AssignCommand(oPC,aMakeFireAtLocation(oPC,lTarget)));
             break;
 
         case X2_ITEM_EVENT_EQUIP:
