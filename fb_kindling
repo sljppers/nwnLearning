@@ -1,0 +1,92 @@
+#include "x2_inc_switches"
+#include "x0_i0_position"
+
+void aMakeFireAtLocation(object oPC,location lTarget){
+                        CreateObject(OBJECT_TYPE_PLACEABLE,"firebld_cmpfr",lTarget,TRUE,"fb_cmpfr");
+                        object oNewFire = GetNearestObjectByTag("fb_cmpfr",oPC,1);
+                        SetLocalInt(oNewFire,"Fueled",1);
+                        SignalEvent(oNewFire,EventUserDefined(615881));
+                        }
+
+void aShave()
+{
+        object oPC = GetItemActivator();
+
+        CreateItemOnObject("fb_tinder",oPC,3,"fb_tinder");
+}
+
+void main()
+{
+    int    nEvent = GetUserDefinedItemEventNumber();
+    object oPC;
+    object oItem;
+    vector vPC;
+    location lTarget;
+    float fDir;
+    float fAngleOpposite;
+    object oPCprimary;
+    object oPCsecondary;
+    int nItemTypePrim;
+    int nItemTypeSec;
+
+    int nResult = X2_EXECUTE_SCRIPT_END;
+
+    switch (nEvent)
+    {
+        case X2_ITEM_EVENT_ONHITCAST:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_ACTIVATE:                                              //Activate Case
+
+            oPC      = GetItemActivator();
+            oItem    = GetItemActivated();
+            fDir = GetFacing(oPC);
+            fAngleOpposite = GetOppositeDirection(fDir);
+            lTarget = GenerateNewLocation(oPC,1.1,fDir,fAngleOpposite);
+            oPCprimary =  GetItemInSlot(INVENTORY_SLOT_RIGHTHAND,oPC);
+            oPCsecondary = GetItemInSlot(INVENTORY_SLOT_LEFTHAND,oPC);
+            nItemTypePrim = GetBaseItemType(oPCprimary);
+            nItemTypeSec = GetBaseItemType(oPCsecondary);
+
+            if(nItemTypePrim == 2 || nItemTypePrim == 18 || nItemTypePrim == 38 || nItemTypePrim == 63 || nItemTypePrim == 108 ||
+               nItemTypeSec == 2 || nItemTypeSec == 18 || nItemTypeSec == 38 || nItemTypeSec == 63 || nItemTypeSec == 108){
+                AssignCommand(oPC,ActionPlayAnimation(18,0.1,18.0));
+                DelayCommand(18.0,aShave());
+                SetItemCharges(oItem,-1);
+                break;
+                }
+            if(nItemTypePrim == 22 || nItemTypeSec == 22){
+                AssignCommand(oPC,ActionPlayAnimation(18,0.8,6.0));
+                DelayCommand(6.0,aShave());
+                SetItemCharges(oItem,-1);
+                break;
+                }
+            AssignCommand(oPC,ActionPlayAnimation(12,0.4,12.0));
+            DelayCommand(12.0,AssignCommand(oPC,aMakeFireAtLocation(oPC,lTarget)));
+            DestroyObject(oItem,0.0);
+            break;
+
+        case X2_ITEM_EVENT_EQUIP:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_UNEQUIP:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_ACQUIRE:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_UNACQUIRE:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_SPELLCAST_AT:
+            // Your code goes here
+            nResult = X2_EXECUTE_SCRIPT_CONTINUE;
+            break;
+    }
+    SetExecutedScriptReturnValue(nResult);
+}
