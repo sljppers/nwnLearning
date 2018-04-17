@@ -1,0 +1,82 @@
+#include "x2_inc_switches"
+#include "x0_i0_position"
+
+void aLight()
+{
+        object oTarget;
+        object oPC;
+        int nDC = GetAbilityScore(oPC,ABILITY_WISDOM-1,FALSE);
+        int nRoll = Random(20);
+
+        if(nRoll>nDC){
+            SetLocalInt(oTarget,"Lit",TRUE);
+            SetLocalInt(oTarget,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+1);
+            }
+        else{
+            SendMessageToPC(oPC,"The tinder doesn't manage to light the kindling, but burns away.");
+            }
+        DestroyObject(OBJECT_SELF,0.0);
+}
+
+void main()
+{
+    int    nEvent = GetUserDefinedItemEventNumber();
+    object oPC;
+    object oTarget;
+    vector vPC;
+    location lTarget;
+    float fDir;
+    float fAngleOpposite;
+    int nRoll;
+    int nSkill;
+    int nWeather;
+    int nPCFireBuilder = GetHasFeat(FEAT_TURN_UNDEAD,oPC);//CHANGEME
+
+    int nResult = X2_EXECUTE_SCRIPT_END;
+
+    switch (nEvent)
+    {
+        case X2_ITEM_EVENT_ONHITCAST:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_ACTIVATE:                                              //Activate Case
+
+            oPC      = GetItemActivator();
+            oTarget  = GetItemActivatedTarget();
+            nWeather = GetWeather(GetArea(oTarget));
+            nRoll    = Random(40);
+
+            if(nWeather==WEATHER_RAIN || nWeather==WEATHER_SNOW){
+                nRoll = nRoll+Random(20);
+                }
+
+            if(GetTag(oTarget)=="fb_cmpfr" && nPCFireBuilder==TRUE){
+                AssignCommand(oPC,ActionPlayAnimation(12,0.4,IntToFloat(nRoll)));
+                DelayCommand(IntToFloat(nRoll),aLight());
+                }
+            break;
+
+        case X2_ITEM_EVENT_EQUIP:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_UNEQUIP:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_ACQUIRE:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_UNACQUIRE:
+            // Your code goes here
+            break;
+
+        case X2_ITEM_EVENT_SPELLCAST_AT:
+            // Your code goes here
+            nResult = X2_EXECUTE_SCRIPT_CONTINUE;
+            break;
+    }
+    SetExecutedScriptReturnValue(nResult);
+}
