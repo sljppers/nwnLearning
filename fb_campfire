@@ -9,6 +9,7 @@ void main()
 {
     int nCall = GetUserDefinedEventNumber();
     location lFire = GetLocation(OBJECT_SELF);
+    object oArea = GetArea(OBJECT_SELF);
     effect eFireDie = EffectVisualEffect(263,FALSE);
     object oFuel = GetFirstItemInInventory(OBJECT_SELF);
     int nLogCount = GetLocalInt(OBJECT_SELF,"LogCount");
@@ -40,8 +41,10 @@ void main()
 
                 SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")+1);                                          //Add a burn counter on an item within the fire.
                 string sCurrentBurn = GetName(oFuel);
+                string sArea = GetName(oArea);
                 cFuelType = GetBaseItemType(oFuel);
                 int nSmallFireBurnable = FALSE;
+                object oHandler = GetLastDisturbed();
 
                     if(cFuelType == 6 || cFuelType == 7 || cFuelType == 8 ||  cFuelType == 11 || cFuelType == 20 ||         //Crossbows, Bows, Arrows
                     cFuelType == 75 || cFuelType == 102 || cFuelType == 105 || cFuelType == 74 ||                           //Scrolls, Books
@@ -91,6 +94,23 @@ void main()
                         CreateObject(OBJECT_TYPE_PLACEABLE,"plc_flamemedium",lFire,TRUE,"temp_flame");
                         PlaySound("scm_hitfire");
                         }
+                    if(GetTag(oFuel)=="pc_corpse" && GetLocalInt(oFuel,"nBurnCount")>=7 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){
+                        SendMessageToPC(oHandler,"You may only burn player corpses on a bonfire.");
+                        SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")-1);
+                        }
+
+                    if(GetTag(oFuel)=="pc_corpse" && GetLocalInt(oFuel,"nBurnCount")>=40 && GetLocalInt(OBJECT_SELF,"IsBonfire")==TRUE){
+                        if(GetLocalInt(oFuel,"nBurnCount")==60 && !GetIsAreaInterior(oArea)&&GetIsAreaAboveGround(oArea)){
+                            SpeakString("Black smoke rises high above "+sArea+".",TALKVOLUME_SHOUT);
+                            }
+                        if(GetLocalInt(oFuel,"nBurnCount")==100 && !GetIsAreaInterior(oArea)&&GetIsAreaAboveGround(oArea)){
+                            SpeakString("The black smoke over "+sArea+" begins to dissipate.",TALKVOLUME_SHOUT);
+                            }
+                        if(GetLocalInt(oFuel,"nBurnCount")>=101){
+                            SpeakString("The funeral pyre pops and begins to shift as it consumes the body atop it.",TALKVOLUME_TALK);
+                            DestroyObject(oFuel);
+                            }
+                        }
 
                 oFuel = GetNextItemInInventory(OBJECT_SELF);
                 }
@@ -126,6 +146,7 @@ void main()
                         }
                 }
 
+
                 nLogCount = 0;                                                                                               //A number other than three logs at a time will be discarded
                 DestroyObject(GetNearestObjectByTag("temp_flame",OBJECT_SELF,1));                                            //And destroy VFX from the loop
 
@@ -149,6 +170,9 @@ void main()
                 SpeakString("The final flames of the fire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
                 ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,eFireDie,lFire,2.5);
                 CreateItemOnObject("fb_ash",OBJECT_SELF,nAshCount,"fb_ash");
+                if(GetLocalInt(OBJECT_SELF,"IsBonfire")==TRUE){
+                    CreateItemOnObject("fb_charcoal",OBJECT_SELF,FloatToInt(IntToFloat(nAshCount/10)));
+                    }
                 nAshCount = 0;
                 DestroyObject(OBJECT_SELF,1.0);
                 }
