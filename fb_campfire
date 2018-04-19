@@ -1,24 +1,27 @@
-//Switch (nCall) Contents
+                                              //Switch (nCall) Contents
 //Case 615881 = Heartbeat
 //Case 615882 = Campfire While Loop (Burns Items)
 //Case 615883 = Firebuilding Technique Space (After While Loop)
-//Case 615884 = Checking Fueled status, deplete or kill fire
+//Case 615884 =
+//Case 615885 = Checking Fueled status, deplete or kill fire
 //Case 615889 = Fire Unlit
 
 void main()
 {
-    int nCall = GetUserDefinedEventNumber();
     location lFire = GetLocation(OBJECT_SELF);
-    object oArea = GetArea(OBJECT_SELF);
-    effect eFireDie = EffectVisualEffect(263,FALSE);
-    object oFuel = GetFirstItemInInventory(OBJECT_SELF);
+    int nCall = GetUserDefinedEventNumber();
     int nLogCount = GetLocalInt(OBJECT_SELF,"LogCount");
     int nAshCount = GetLocalInt(OBJECT_SELF,"AshCount");
+    int nCharcoalCount = GetLocalInt(OBJECT_SELF,"CharcoalCount");
     int cFuelType;
-    int nPCFireBuilder = GetHasFeat(FEAT_TURN_UNDEAD,GetLastDisturbed());//CHANGEMETOPROPERFEAT                             //Checks if the last PC to Disturb the fire has Firebuilding.
+    int nPCFireBuilder;                                                                                                      //Checks if the last PC to Disturb the fire has Firebuilding.
     int nFireState;
     int nWindKill;
-    object oNearestPC = GetNearestCreature(CREATURE_TYPE_PLAYER_CHAR,PLAYER_CHAR_IS_PC,OBJECT_SELF);
+    int nPlayersInArea;
+    object oArea = GetArea(OBJECT_SELF);
+    object oFuel;
+    object oNearestPC;
+    object oCamper;
 
  switch (nCall)
     {
@@ -36,6 +39,8 @@ void main()
 
 
         case 615882:
+
+            oFuel = GetFirstItemInInventory(OBJECT_SELF);
 
             while(GetIsObjectValid(oFuel)){
 
@@ -118,7 +123,10 @@ void main()
             SignalEvent(OBJECT_SELF,EventUserDefined(615883));
         break;
 
+
         case 615883:
+
+            nPCFireBuilder = GetHasFeat(FEAT_TURN_UNDEAD,GetLastDisturbed());
 
             if(nPCFireBuilder==TRUE){
                     if(nLogCount==3){                                                                                        //Three logs at a time will burn more efficiently, combining together to burn for 900 seconds of burn time. (15 minutes)
@@ -129,17 +137,17 @@ void main()
                     if(GetLocalInt(OBJECT_SELF,"Fueled") >= 75 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){
                         CreateObject(OBJECT_TYPE_PLACEABLE,"fb_bonfire",lFire,TRUE,"fb_bonfire");
                         object oNewBonFire = GetNearestObjectByTag("fb_bonfire",OBJECT_SELF,1);
-                        SetLocalInt(oNewBonFire,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled"));
                         SetLocalInt(oNewBonFire,"Lit",TRUE);
+                        SetLocalInt(oNewBonFire,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled"));
                         SetLocalInt(oNewBonFire,"LogCount",nLogCount);
                         SetLocalInt(oNewBonFire,"AshCount",nAshCount);
+                        SetLocalInt(oNewBonFire,"IsBonfire",TRUE);
                             while(GetIsObjectValid(oFuel)){
                                 CopyItem(oFuel,oNewBonFire,TRUE);
                                 DestroyObject(oFuel,0.0);
 
                                 oFuel = GetNextItemInInventory(OBJECT_SELF);
                                 }
-                        SetLocalInt(oNewBonFire,"IsBonfire",TRUE);
                         SignalEvent(oNewBonFire,EventUserDefined(615881));
                         DestroyObject(GetNearestObjectByTag("temp_flame",OBJECT_SELF,1));
                         DestroyObject(OBJECT_SELF,0.0);
@@ -153,7 +161,24 @@ void main()
             SignalEvent(OBJECT_SELF,EventUserDefined(615884));
         break;
 
+
         case 615884:
+
+            oCamper = GetFirstObjectInShape(SHAPE_SPHERE,5.0,lFire,TRUE,OBJECT_TYPE_CREATURE);
+
+                while(GetIsObjectValid(oCamper)){
+                      SetLocalInt(oCamper,"Smells like a wood fire.",TRUE);
+
+                      oCamper = GetNextObjectInShape(SHAPE_SPHERE,5.0,lFire,TRUE,OBJECT_TYPE_CREATURE);
+                      nPlayersInArea++;
+                      }
+
+            nPlayersInArea = 1;
+            SignalEvent(OBJECT_SELF,EventUserDefined(615885));
+        break;
+
+
+        case 615885:
 
             if(GetLocalInt(OBJECT_SELF,"Fueled") > 49 && GetLocalInt(OBJECT_SELF,"Fueled") < 75 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){                                                                      //If fuel is greater than 49 (16.333 minutes), dial it back
                 SpeakString("The fire rages. Adding any more wood would be dangerous.",TALKVOLUME_TALK);
@@ -168,10 +193,15 @@ void main()
 
             if(GetLocalInt(OBJECT_SELF,"Fueled") == 0){                                                                      //Kill Fire on 0 Fuel
                 SpeakString("The final flames of the fire fall to ember with a whisp of smoke",TALKVOLUME_TALK);
-                ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,eFireDie,lFire,2.5);
-                CreateItemOnObject("fb_ash",OBJECT_SELF,nAshCount,"fb_ash");
+                ApplyEffectAtLocation(DURATION_TYPE_TEMPORARY,EffectVisualEffect(263,FALSE),lFire,2.5);
+                    for(nAshCount>0;nAshCount=0;nAshCount--){
+                        CreateItemOnObject("fb_ash",OBJECT_SELF,1,"fb_ash");
+                        nCharcoalCount++;
+                        }
                 if(GetLocalInt(OBJECT_SELF,"IsBonfire")==TRUE){
-                    CreateItemOnObject("fb_charcoal",OBJECT_SELF,FloatToInt(IntToFloat(nAshCount/10)));
+                        for(nCharcoalCount>=10;nCharcoalCount<10;nCharcoalCount-10){
+                        CreateItemOnObject("fb_charcoal",OBJECT_SELF,1,"fb_charcoal");
+                        }
                     }
                 nAshCount = 0;
                 DestroyObject(OBJECT_SELF,1.0);
@@ -189,9 +219,11 @@ void main()
             SignalEvent(OBJECT_SELF,EventUserDefined(615881));
         break;
 
+
         case 615889:
 
             nWindKill = Random(10);
+            oNearestPC = GetNearestCreature(CREATURE_TYPE_PLAYER_CHAR,PLAYER_CHAR_IS_PC,OBJECT_SELF);
 
             if(nWindKill==1 && GetHasFeat(FEAT_TURN_UNDEAD,oNearestPC)!=TRUE){//CHANGEFEAT
                 SpeakString("The kindling slides out of place, scattering.");
@@ -201,17 +233,6 @@ void main()
                 }
             SignalEvent(OBJECT_SELF,EventUserDefined(615881));
         break;
+
     }
 }
-
-
-
-/*To-Do
-FB Make Bonfire burn bigger things
-FB Make Signal fire "recipe" (Ichor/Sap) and accompanying area shouts
-FB Add fire damage to arrows, weapons, brief on use
-FB Add smoke cover "recipe" for small surrounding area
-FB Cold Damage Immunity 5%?
-Add items-are-hot property and cool down
-FB Add Roll to creation, burn on crit fail
-Add warmth around area (Spectre?)
