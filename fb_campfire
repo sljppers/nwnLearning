@@ -1,24 +1,30 @@
-                                              //Switch (nCall) Contents
+//Switch (nCall) Contents
 //Case 615881 = Heartbeat
-//Case 615882 = Campfire While Loop (Burns Items)
-//Case 615883 = Firebuilding Technique Space (After While Loop)
-//Case 615884 =
-//Case 615885 = Checking Fueled status, deplete or kill fire
+//Case 615882 = Handle Animation based on fire's state
+//Case 615883 = Item Loop (Burns stuff)
+//Case 615884 = After Item Loop
+//Case 615885 = Checks Players around fire (Place to apply effects)
+//Case 615886 = Checking Fueled status, deplete or kill fire
 //Case 615889 = Fire Unlit
+
+#include "x0_i0_position"
 
 void main()
 {
     location lFire = GetLocation(OBJECT_SELF);
+    float nDirToFire;
     int nCall = GetUserDefinedEventNumber();
     int nLogCount = GetLocalInt(OBJECT_SELF,"LogCount");
     int nAshCount = GetLocalInt(OBJECT_SELF,"AshCount");
     int nCharcoalCount = GetLocalInt(OBJECT_SELF,"CharcoalCount");
+    int nSignalCount = GetLocalInt(OBJECT_SELF,"SignalCount");
     int cFuelType;
     int nPCFireBuilder;                                                                                                      //Checks if the last PC to Disturb the fire has Firebuilding.
-    int nFireState;
+    int nFireState = 1;
     int nWindKill;
     int nPlayersInArea;
     object oArea = GetArea(OBJECT_SELF);
+    string sArea = GetName(oArea);
     object oFuel;
     object oNearestPC;
     object oCamper;
@@ -40,13 +46,48 @@ void main()
 
         case 615882:
 
+            nFireState = 1;
+
+            if(GetLocalInt(OBJECT_SELF,"Fueled") >=4){                                                                      //Notify fire is dying. This is the latest point to burn logs. The Flame visual will disappear at this point, though the fire will still be active.
+                nFireState++;
+                }
+            if(GetLocalInt(OBJECT_SELF,"Fueled") >= 40){                                                                      //Notify fire is dying. This is the latest point to burn logs. The Flame visual will disappear at this point, though the fire will still be active.
+                nFireState++;
+                }
+
+            switch (nFireState)
+            {
+                    case 1:
+                        ApplyEffectToObject(DURATION_TYPE_TEMPORARY,EffectVisualEffect(157),OBJECT_SELF,20.0);
+                        ApplyEffectToObject(DURATION_TYPE_TEMPORARY,EffectVisualEffect(535),OBJECT_SELF,20.0);
+                        PlayAnimation(ANIMATION_PLACEABLE_DEACTIVATE,1.0,0.0);
+                    break;
+
+                    case 2:
+                        ApplyEffectToObject(DURATION_TYPE_TEMPORARY,EffectVisualEffect(158),OBJECT_SELF,20.0);
+                        PlayAnimation(ANIMATION_PLACEABLE_ACTIVATE,1.0,0.0);
+                    break;
+
+                    case 3:
+                        ApplyEffectToObject(DURATION_TYPE_TEMPORARY,EffectVisualEffect(159),OBJECT_SELF,20.0);
+                    break;
+
+                    case 0:
+                    break;
+            }
+
+            SignalEvent(OBJECT_SELF,EventUserDefined(615883));
+        break;
+
+
+        case 615883:
+
             oFuel = GetFirstItemInInventory(OBJECT_SELF);
 
             while(GetIsObjectValid(oFuel)){
 
                 SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")+1);                                          //Add a burn counter on an item within the fire.
                 string sCurrentBurn = GetName(oFuel);
-                string sArea = GetName(oArea);
                 cFuelType = GetBaseItemType(oFuel);
                 int nSmallFireBurnable = FALSE;
                 object oHandler = GetLastDisturbed();
@@ -80,9 +121,14 @@ void main()
                             }
                         }
 
+                    if(GetLocalInt(oFuel,"nBurnCount")>=3 && GetTag(oFuel)=="fb_signal"){
+                        SetLocalInt(OBJECT_SELF,"SignalCount",GetLocalInt(OBJECT_SELF,"SignalCount")+3);
+                        nSmallFireBurnable = TRUE;
+                        }
+
                     if(GetLocalInt(oFuel,"nBurnCount")>=4 && GetTag(oFuel)=="fb_log"){                                     //Wood will burn in four heartbeats (80 seconds), making Ash and contributing to a count specific to burning three logs at a time for the most efficient fire.
                         nAshCount++;
-                        nLogCount++;
+                        SetLocalInt(OBJECT_SELF,"LogCount",GetLocalInt(OBJECT_SELF,"LogCount")+1);
                         SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+9);
                         DestroyObject(oFuel);
                         }
@@ -99,39 +145,50 @@ void main()
                         CreateObject(OBJECT_TYPE_PLACEABLE,"plc_flamemedium",lFire,TRUE,"temp_flame");
                         PlaySound("scm_hitfire");
                         }
-                    if(GetTag(oFuel)=="pc_corpse" && GetLocalInt(oFuel,"nBurnCount")>=7 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){
-                        SendMessageToPC(oHandler,"You may only burn player corpses on a bonfire.");
-                        SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")-1);
+
+                    if(GetTag(oFuel)=="pc_corpse"){
+                        if(GetLocalInt(oFuel,"nBurnCount")>=7 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){
+                            SendMessageToPC(oHandler,"You may only burn player corpses on a bonfire.");
+                            SetLocalInt(oFuel,"nBurnCount",GetLocalInt(oFuel,"nBurnCount")-1);
+                            }
+                        if(GetLocalInt(oFuel,"nBurnCount")>=60 && GetLocalInt(OBJECT_SELF,"IsBonfire")==TRUE){
+                                if(GetLocalInt(oFuel,"nBurnCount")==60 && !GetIsAreaInterior(oArea)&&GetIsAreaAboveGround(oArea)){
+                                    SpeakString("Black smoke rises high above "+sArea+".",TALKVOLUME_SHOUT);
+                                    }
+                                if(GetLocalInt(oFuel,"nBurnCount")==100 && !GetIsAreaInterior(oArea)&&GetIsAreaAboveGround(oArea)){
+                                    SpeakString("The black smoke over "+sArea+" begins to dissipate.",TALKVOLUME_SHOUT);
+                                    }
+                                if(GetLocalInt(oFuel,"nBurnCount")>=101){
+                                    SpeakString("The funeral pyre pops and begins to shift as it consumes the body atop it.",TALKVOLUME_TALK);
+                                    DestroyObject(oFuel);
+                                    }
+                            }
                         }
 
-                    if(GetTag(oFuel)=="pc_corpse" && GetLocalInt(oFuel,"nBurnCount")>=40 && GetLocalInt(OBJECT_SELF,"IsBonfire")==TRUE){
-                        if(GetLocalInt(oFuel,"nBurnCount")==60 && !GetIsAreaInterior(oArea)&&GetIsAreaAboveGround(oArea)){
-                            SpeakString("Black smoke rises high above "+sArea+".",TALKVOLUME_SHOUT);
-                            }
-                        if(GetLocalInt(oFuel,"nBurnCount")==100 && !GetIsAreaInterior(oArea)&&GetIsAreaAboveGround(oArea)){
-                            SpeakString("The black smoke over "+sArea+" begins to dissipate.",TALKVOLUME_SHOUT);
-                            }
-                        if(GetLocalInt(oFuel,"nBurnCount")>=101){
-                            SpeakString("The funeral pyre pops and begins to shift as it consumes the body atop it.",TALKVOLUME_TALK);
-                            DestroyObject(oFuel);
-                            }
-                        }
 
                 oFuel = GetNextItemInInventory(OBJECT_SELF);
                 }
 
-            SignalEvent(OBJECT_SELF,EventUserDefined(615883));
+            SignalEvent(OBJECT_SELF,EventUserDefined(615884));
         break;
 
 
-        case 615883:
+        case 615884:
 
             nPCFireBuilder = GetHasFeat(FEAT_TURN_UNDEAD,GetLastDisturbed());
 
             if(nPCFireBuilder==TRUE){
-                    if(nLogCount==3){                                                                                        //Three logs at a time will burn more efficiently, combining together to burn for 900 seconds of burn time. (15 minutes)
+                    if(GetLocalInt(OBJECT_SELF,"LogCount")==3){                                                                                        //Three logs at a time will burn more efficiently, combining together to burn for 900 seconds of burn time. (15 minutes)
                         SpeakString("The logs within the well managed fire begin to burn in tandem.",TALKVOLUME_TALK);
                         SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")+18);
+                        }
+                    if(GetLocalInt(OBJECT_SELF,"SignalCount")>2 && GetLocalInt(OBJECT_SELF,"SignalSpoke")!=TRUE){
+                        SpeakString("Thick smoke rises above the fire in a plume.",TALKVOLUME_TALK);
+                        CreateObject(OBJECT_TYPE_PLACEABLE,"plc_dustplume",lFire,TRUE,"temp_signal");
+                            if(!GetIsAreaInterior(oArea)&&GetIsAreaAboveGround(oArea)){
+                                SpeakString("A plume of smoke rises high above "+sArea+".",TALKVOLUME_SHOUT);                //CURRENTLY A MODULE SHOUT
+                                }
+                        SetLocalInt(OBJECT_SELF,"SignalSpoke",TRUE);
                         }
 
                     if(GetLocalInt(OBJECT_SELF,"Fueled") >= 75 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){
@@ -141,6 +198,7 @@ void main()
                         SetLocalInt(oNewBonFire,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled"));
                         SetLocalInt(oNewBonFire,"LogCount",nLogCount);
                         SetLocalInt(oNewBonFire,"AshCount",nAshCount);
+                        SetLocalInt(oNewBonFire,"SignalCount",GetLocalInt(OBJECT_SELF,"SignalCount"));
                         SetLocalInt(oNewBonFire,"IsBonfire",TRUE);
                             while(GetIsObjectValid(oFuel)){
                                 CopyItem(oFuel,oNewBonFire,TRUE);
@@ -155,40 +213,43 @@ void main()
                 }
 
 
-                nLogCount = 0;                                                                                               //A number other than three logs at a time will be discarded
-                DestroyObject(GetNearestObjectByTag("temp_flame",OBJECT_SELF,1));                                            //And destroy VFX from the loop
+                SetLocalInt(OBJECT_SELF,"LogCount",0);                                                                                               //A number other than three logs at a time will be discarded                                           //And destroy VFX from the loop
 
-            SignalEvent(OBJECT_SELF,EventUserDefined(615884));
-        break;
-
-
-        case 615884:
-
-            oCamper = GetFirstObjectInShape(SHAPE_SPHERE,5.0,lFire,TRUE,OBJECT_TYPE_CREATURE);
-
-                while(GetIsObjectValid(oCamper)){
-                      SetLocalInt(oCamper,"Smells like a wood fire.",TRUE);
-
-                      oCamper = GetNextObjectInShape(SHAPE_SPHERE,5.0,lFire,TRUE,OBJECT_TYPE_CREATURE);
-                      nPlayersInArea++;
-                      }
-
-            nPlayersInArea = 1;
             SignalEvent(OBJECT_SELF,EventUserDefined(615885));
         break;
 
 
         case 615885:
 
+            oCamper = GetFirstObjectInShape(SHAPE_SPHERE,5.0,lFire,TRUE,OBJECT_TYPE_CREATURE);
+
+                while(GetIsObjectValid(oCamper)){
+                    if(GetLocalInt(OBJECT_SELF,"SignalCount")<=1){
+                        DestroyObject(GetObjectByTag("temp_signal",1));
+                            }
+                    if(GetIsPC(oCamper)){
+                        if(GetLocalInt(oCamper,"Smells")!=TRUE){
+                            SetLocalInt(oCamper,"Smells",TRUE);
+                            }
+                        }
+
+                      oCamper = GetNextObjectInShape(SHAPE_SPHERE,5.0,lFire,TRUE,OBJECT_TYPE_CREATURE);
+                      }
+
+            SignalEvent(OBJECT_SELF,EventUserDefined(615886));
+        break;
+
+
+        case 615886:
+
+            if(GetLocalInt(OBJECT_SELF,"Fueled")==3){
+                SpeakString("Only a small flame dances.",TALKVOLUME_TALK);
+                nFireState = 1;
+                }
+
             if(GetLocalInt(OBJECT_SELF,"Fueled") > 49 && GetLocalInt(OBJECT_SELF,"Fueled") < 75 && GetLocalInt(OBJECT_SELF,"IsBonfire")!=TRUE){                                                                      //If fuel is greater than 49 (16.333 minutes), dial it back
                 SpeakString("The fire rages. Adding any more wood would be dangerous.",TALKVOLUME_TALK);
                 SetLocalInt(OBJECT_SELF,"Fueled",49);
-                }
-
-            if(GetLocalInt(OBJECT_SELF,"Fueled") == 4){                                                                      //Notify fire is dying. This is the latest point to burn logs. The Flame visual will disappear at this point, though the fire will still be active.
-                SpeakString("Only a small flame dances.",TALKVOLUME_TALK);
-                PlayAnimation(ANIMATION_PLACEABLE_DEACTIVATE,1.0,1.0);
-                nFireState = 0;
                 }
 
             if(GetLocalInt(OBJECT_SELF,"Fueled") == 0){                                                                      //Kill Fire on 0 Fuel
@@ -207,21 +268,25 @@ void main()
                 DestroyObject(OBJECT_SELF,1.0);
                 }
 
+            if(GetLocalInt(OBJECT_SELF,"SignalCount")>0){
+                SetLocalInt(OBJECT_SELF,"SignalCount",GetLocalInt(OBJECT_SELF,"SignalCount")-1);
+                if(GetLocalInt(OBJECT_SELF,"SignalCount")==0){
+                    SetLocalInt(OBJECT_SELF,"SignalSpoke",FALSE);
+                    }
+                }
 
            SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-1);                                       //Reduce fuel by 1 and goto heartbeat case
                if(GetLocalInt(OBJECT_SELF,"IsBonfire")==TRUE){
                     SetLocalInt(OBJECT_SELF,"Fueled",GetLocalInt(OBJECT_SELF,"Fueled")-4);
                     }
-               if(GetLocalInt(OBJECT_SELF,"Fueled") > 4 && nFireState == 0){                                            //Reanimate fire VFX if fuel is above 4
-                    PlayAnimation(ANIMATION_PLACEABLE_ACTIVATE,1.0,1.0);
-                    nFireState = 1;
-                    }
+
             SignalEvent(OBJECT_SELF,EventUserDefined(615881));
         break;
 
 
         case 615889:
 
+            nFireState = 0;
             nWindKill = Random(10);
             oNearestPC = GetNearestCreature(CREATURE_TYPE_PLAYER_CHAR,PLAYER_CHAR_IS_PC,OBJECT_SELF);
 
